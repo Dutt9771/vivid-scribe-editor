@@ -33,6 +33,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   const quillRef = useRef<ReactQuill>(null);
 
   const handleContentChange = useCallback((newContent: string) => {
+    console.log('Content changed:', newContent);
     setContent(newContent);
     onChange?.(newContent);
   }, [onChange]);
@@ -44,6 +45,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
+        console.log('File selected:', file.name);
         setSelectedImage(file);
         setShowImageCropper(true);
       }
@@ -52,17 +54,31 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   }, []);
 
   const handleCroppedImage = useCallback((croppedImageUrl: string) => {
+    console.log('Inserting cropped image:', croppedImageUrl);
+    
     if (quillRef.current) {
       const quill = quillRef.current.getEditor();
       const range = quill.getSelection();
       const index = range ? range.index : quill.getLength();
       
+      console.log('Inserting image at index:', index);
+      
+      // Insert the image
       quill.insertEmbed(index, 'image', croppedImageUrl);
+      
+      // Move cursor after the image
       quill.setSelection(index + 1, 0);
+      
+      // Force a content update
+      const newContent = quill.root.innerHTML;
+      console.log('New content after image insert:', newContent);
+      setContent(newContent);
+      onChange?.(newContent);
     }
+    
     setShowImageCropper(false);
     setSelectedImage(null);
-  }, []);
+  }, [onChange]);
 
   const handleVariableInsert = useCallback((variable: string) => {
     if (quillRef.current) {

@@ -48,51 +48,63 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
     });
   }, []);
 
-  const getCroppedImg = useCallback(async () => {
-    if (!completedCrop || !imgRef.current || !canvasRef.current) {
-      return;
-    }
+  const getCroppedImg = useCallback((): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (!completedCrop || !imgRef.current || !canvasRef.current) {
+        reject('Missing crop data');
+        return;
+      }
 
-    const image = imgRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+      const image = imgRef.current;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
 
-    if (!ctx) {
-      return;
-    }
+      if (!ctx) {
+        reject('No canvas context');
+        return;
+      }
 
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
 
-    canvas.width = completedCrop.width;
-    canvas.height = completedCrop.height;
+      canvas.width = completedCrop.width;
+      canvas.height = completedCrop.height;
 
-    ctx.drawImage(
-      image,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0,
-      0,
-      completedCrop.width,
-      completedCrop.height
-    );
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    return new Promise<string>((resolve) => {
+      ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        completedCrop.width,
+        completedCrop.height
+      );
+
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
+          console.log('Created cropped image URL:', url);
           resolve(url);
+        } else {
+          reject('Failed to create blob');
         }
       }, 'image/jpeg', 0.9);
     });
   }, [completedCrop]);
 
   const handleCrop = async () => {
-    const croppedImageUrl = await getCroppedImg();
-    if (croppedImageUrl) {
+    try {
+      console.log('Starting crop process...');
+      const croppedImageUrl = await getCroppedImg();
+      console.log('Cropped image URL created:', croppedImageUrl);
       onCrop(croppedImageUrl);
+    } catch (error) {
+      console.error('Error cropping image:', error);
     }
   };
 
@@ -134,7 +146,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button onClick={handleCrop}>
+          <Button onClick={handleCrop} disabled={!completedCrop}>
             Crop & Insert
           </Button>
         </DialogFooter>
