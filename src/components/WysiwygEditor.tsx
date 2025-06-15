@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -63,22 +62,23 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
       
       console.log('Inserting image at index:', index);
       
-      // Insert the image
-      quill.insertEmbed(index, 'image', croppedImageUrl);
+      // Insert the image with the blob URL
+      quill.insertEmbed(index, 'image', croppedImageUrl, 'user');
       
       // Move cursor after the image
       quill.setSelection(index + 1, 0);
       
-      // Force a content update
-      const newContent = quill.root.innerHTML;
-      console.log('New content after image insert:', newContent);
-      setContent(newContent);
-      onChange?.(newContent);
+      // Wait a moment and then trigger a content update
+      setTimeout(() => {
+        const newContent = quill.root.innerHTML;
+        console.log('New content after image insert:', newContent);
+        handleContentChange(newContent);
+      }, 100);
     }
     
     setShowImageCropper(false);
     setSelectedImage(null);
-  }, [onChange]);
+  }, [handleContentChange]);
 
   const handleVariableInsert = useCallback((variable: string) => {
     if (quillRef.current) {
