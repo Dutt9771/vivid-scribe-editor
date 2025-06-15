@@ -85,15 +85,15 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
         completedCrop.height
       );
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          console.log('Created cropped image URL:', url);
-          resolve(url);
-        } else {
-          reject('Failed to create blob');
-        }
-      }, 'image/jpeg', 0.9);
+      // Convert canvas to base64 data URL instead of blob
+      try {
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        console.log('Created cropped image data URL:', dataUrl.substring(0, 50) + '...');
+        resolve(dataUrl);
+      } catch (error) {
+        console.error('Error creating data URL:', error);
+        reject('Failed to create data URL');
+      }
     });
   }, [completedCrop]);
 
@@ -101,7 +101,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
     try {
       console.log('Starting crop process...');
       const croppedImageUrl = await getCroppedImg();
-      console.log('Cropped image URL created:', croppedImageUrl);
+      console.log('Cropped image data URL created successfully');
       onCrop(croppedImageUrl);
     } catch (error) {
       console.error('Error cropping image:', error);
