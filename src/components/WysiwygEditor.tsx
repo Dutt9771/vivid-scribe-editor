@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { CustomToolbar } from './CustomToolbar';
@@ -26,16 +26,49 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   variables = []
 }) => {
   const [content, setContent] = useState(value);
+  const [htmlContent, setHtmlContent] = useState(value);
   const [showImageCropper, setShowImageCropper] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'html'>('editor');
   const quillRef = useRef<ReactQuill>(null);
+
+  // Sync content when value prop changes
+  useEffect(() => {
+    setContent(value);
+    setHtmlContent(value);
+  }, [value]);
+
+  // Sync HTML content when switching to HTML tab
+  useEffect(() => {
+    if (activeTab === 'html') {
+      setHtmlContent(content);
+    }
+  }, [activeTab, content]);
 
   const handleContentChange = useCallback((newContent: string) => {
     console.log('Content changed:', newContent);
     setContent(newContent);
     onChange?.(newContent);
   }, [onChange]);
+
+  const handleHtmlContentChange = useCallback((newHtmlContent: string) => {
+    console.log('HTML content changed:', newHtmlContent);
+    setHtmlContent(newHtmlContent);
+    setContent(newHtmlContent);
+    onChange?.(newHtmlContent);
+  }, [onChange]);
+
+  const handleTabChange = useCallback((newTab: string) => {
+    if (newTab === 'editor' && activeTab === 'html') {
+      // When switching from HTML to editor, update the content
+      setContent(htmlContent);
+      if (quillRef.current) {
+        const quill = quillRef.current.getEditor();
+        quill.root.innerHTML = htmlContent;
+      }
+    }
+    setActiveTab(newTab as 'editor' | 'preview' | 'html');
+  }, [activeTab, htmlContent]);
 
   const handleImageUpload = useCallback(() => {
     const input = document.createElement('input');
@@ -62,7 +95,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
       
       console.log('Inserting image at index:', index);
       
-      // Insert the image with the blob URL
+      // Insert the image with the data URL
       quill.insertEmbed(index, 'image', croppedImageUrl, 'user');
       
       // Move cursor after the image
@@ -133,7 +166,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           </div>
         </div>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="editor" className="flex items-center gap-2">
               <Type className="w-4 h-4" />
@@ -171,12 +204,16 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
           
           <TabsContent value="html" className="mt-4">
             <div className="border rounded-md">
+              <div className="bg-gray-50 px-4 py-2 border-b">
+                <h4 className="text-sm font-medium text-gray-700">HTML Source</h4>
+              </div>
               <textarea
-                value={content}
-                onChange={(e) => handleContentChange(e.target.value)}
-                className="w-full p-4 font-mono text-sm resize-none border-0 focus:outline-none"
+                value={htmlContent}
+                onChange={(e) => handleHtmlContentChange(e.target.value)}
+                className="w-full p-4 font-mono text-sm resize-none border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 style={{ height }}
                 placeholder="Enter HTML content..."
+                spellCheck={false}
               />
             </div>
           </TabsContent>
